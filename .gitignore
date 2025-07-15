@@ -1,0 +1,40 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+*.log
+
+# --- Virtual Environment ---
+.venv/
+env/
+venv/
+
+# --- Environment Variables / Secrets ---
+.env
+
+# --- Streamlit ---
+# User-specific config files and session state
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# --- Jupyter (if used) ---
+.ipynb_checkpoints/
+
+# --- VS Code / PyCharm / IDEs ---
+.vscode/
+.idea/
+
+# --- macOS & Windows ---
+.DS_Store
+Thumbs.db
+
+# --- Node/npm (if you use JS-based plotting or dashboard tools) ---
+node_modules/
+package-lock.json
+
+# --- Test cache ---
+pytest_cache/

@@ -12,7 +12,6 @@ def init_connection():
 supabase = init_connection()
 
 # Perform query.
-# Uses st.cache_data to only rerun when the query changes or after 10 min.
 @st.cache_data()
 def run_query():
     return supabase.table("Player").select("*").execute().data
@@ -26,7 +25,7 @@ st.header("Add a New Player")
 
 with st.form("add_player_form"):
     PlayerName = st.text_input("Player Name")
-    PlayerYOB = st.text_input("Date of Birth")
+    PlayerYOB = st.text_input("Year of Birth")
     PlayerPosition = st.text_input("Player Position")
     submitted = st.form_submit_button("Add Player")
 

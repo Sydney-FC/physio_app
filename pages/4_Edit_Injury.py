@@ -27,6 +27,8 @@ row_labels = create_edit_injury_options(injury_data)
 
 st.header("Edit an Existing Injury")
 
+st.data_editor(row_labels)
+
 selected_label = st.selectbox("Select Injury Entry", row_labels)
 
 with st.form("edit_injury"):

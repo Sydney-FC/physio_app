@@ -4,9 +4,6 @@ from supabase import create_client, Client
 import streamlit as st
 import pandas as pd
 
-def create_options(Name: str, x_ID: str):
-    return Name + " (ID: " + str(x_ID) + ")"
-
 def get_ID(selected):
     selected = re.findall(r'\d+', selected)
     return int(selected[0])
@@ -56,16 +53,20 @@ def run_query(QueryName: str):
     if QueryName == "GetNotes":
 
         data = supabase.table("InjuryNote").select(
-            "*, Injury(*, Player(PlayerName))"
+            "InjuryNoteDate, InjuryNoteMessage, InjuryStartDate, Injury(OSIICS(OSIICS_Diagnosis), Player(PlayerName))"
         ).execute().data
 
-        # flattened = []
-        # for row in data:
-        #     flattened.append({
-        #         ""
-        #     })
+        flattened = []
+        for row in data:
+            flattened.append({
+                "PlayerName": row["Injury"]["Player"]["PlayerName"],
+                "OSIICS_Diagnosis": row["Injury"]["OSIICS"]["OSIICS_Diagnosis"],
+                "InjuryStartDate": row["InjuryStartDate"],
+                "InjuryNoteDate": row["InjuryNoteDate"],
+                "InjuryNoteMessage": row["InjuryNoteMessage"]
+            })
 
-        return data
+        return flattened
 
     if QueryName == "GetInjuries":
         

@@ -2,6 +2,7 @@ import re
 import plotly.express as px
 from supabase import create_client, Client
 import streamlit as st
+import pandas as pd
 
 def create_options(Name: str, x_ID: str):
     return Name + " (ID: " + str(x_ID) + ")"
@@ -10,15 +11,39 @@ def get_ID(selected):
     selected = re.findall(r'\d+', selected)
     return int(selected[0])
 
-def create_edit_injury_options(data):
+def get_Notes_ID(selected):
+    date = re.search(r'\d{4}-\d{2}-\d{2}', selected)
+    date_str = date.group()
+
+    IDs = re.search(r'\((\d+)/(\d+)\)', selected)
+    PlayerID = IDs.group(1)
+    OSIICS_ID = IDs.group(2)
+    return PlayerID, OSIICS_ID, date_str
+
+def create_edit_injury_options(dataframe):
     row_labels = []
 
-    for row in data:
-        row_labels.append(f"{row['InjuryStartDate']} / {row['Player']['PlayerName']} / {row['OSIICS']['OSIICS_Diagnosis']}")
+    for index, row in dataframe.iterrows():
+        InjuryStartDate = row["InjuryStartDate"]
+        PlayerName = row["Player"]
+        OSIICS_Disagnosis = row["OSIICS_Diagnosis"]
+
+        row_labels.append(f"{InjuryStartDate} / {PlayerName} / {OSIICS_Disagnosis}")
     
     return row_labels
 
-@st.cache_resource
+def notes_options(injury_dataframe):
+    options = []
+    for index, row in injury_dataframe.iterrows():
+        PlayerID = row["PlayerID"]
+        PlayerName = row["PlayerName"]
+        OSIICS_ID = row["OSIICS_ID"]
+        OSIICS_Diagnosis = row["OSIICS_Diagnosis"]
+        InjuryStartDate = row["InjuryStartDate"]
+        options.append(f"{PlayerName}, {OSIICS_Diagnosis}, {InjuryStartDate}. IDs ({PlayerID}/{OSIICS_ID}).")
+
+    return options
+
 def init_connection():
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
@@ -28,10 +53,24 @@ supabase = init_connection()
 
 def run_query(QueryName: str):
 
+    if QueryName == "GetNotes":
+
+        data = supabase.table("InjuryNote").select(
+            "*, Injury(*, Player(PlayerName))"
+        ).execute().data
+
+        # flattened = []
+        # for row in data:
+        #     flattened.append({
+        #         ""
+        #     })
+
+        return data
+
     if QueryName == "GetInjuries":
         
         data = supabase.table("Injury").select(
-            "InjuryStartDate, InjuryEndDate, Player(PlayerName), OSIICS(*)"
+            "InjuryStartDate, InjuryEndDate, Player(PlayerID, PlayerName), OSIICS(*)"
             ).execute().data
         
         flattened = []
@@ -39,7 +78,9 @@ def run_query(QueryName: str):
             flattened.append({
                 "InjuryStartDate": r["InjuryStartDate"],
                 "InjuryEndDate": r["InjuryEndDate"],
-                "Player": r["Player"]["PlayerName"],
+                "PlayerID": r["Player"]["PlayerID"],
+                "PlayerName": r["Player"]["PlayerName"],
+                "OSIICS_ID": r["OSIICS"]["OSIICS_ID"],
                 "OSIICS_Diagnosis": r["OSIICS"]["OSIICS_Diagnosis"],
                 "OSIICS_BodyPart": r["OSIICS"]["OSIICS_BodyPart"],
                 "OSIICS_TissueType": r["OSIICS"]["OSIICS_TissueType"],

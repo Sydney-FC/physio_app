@@ -2,14 +2,20 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 import re
+from datetime import datetime
 from supabase import create_client, Client
-from utils.func import create_options, get_ID, create_edit_injury_options, run_query, init_connection, osiics_summary, osiics_charts
+from utils.func import create_options, get_ID, create_edit_injury_options, run_query, init_connection, osiics_summary, osiics_charts, notes_options, get_Notes_ID
 
 supabase = init_connection()
+
+if 'key' not in st.session_state:
+    st.session_state['key'] = 'value'
 
 injury_data = run_query("GetInjuries")
 player_data = run_query("GetPlayers")
 OSIICS_data = run_query("GetOSIICS")
+notes_data = run_query("GetNotes")
+
 df_injury_data = pd.DataFrame(injury_data)
 
 tab1, tab2, tab3, tab4 = st.tabs(["View Injuries", "Add Injury", "Edit Injury", "Add Injury Note"])
@@ -47,10 +53,77 @@ with tab1:
         st.plotly_chart(fig_bar)
         st.plotly_chart(fig_pie)
 
-
 with tab2:
-    st.header("")
+    st.header("Add a New Injury")
+
+    player_options =[]
+    for player in player_data:
+        insert_values = create_options(player["PlayerName"], player["PlayerID"])
+        player_options.append(insert_values)
+
+    OSIICS_options = []
+    for row in OSIICS_data:
+        insert_values = create_options(row["OSIICS_Diagnosis"], row["OSIICS_ID"])
+        OSIICS_options.append(insert_values)
+
+    with st.form("add_injury_form"):
+        player = st.selectbox(label = "Player Name", options = player_options)
+        osiics = st.selectbox(label = "OSIICS Diagnosis", options = OSIICS_options)
+        injury_start_date = st.date_input(label = "Injury Start Date")
+        submitted = st.form_submit_button("Add Injury")
+
+        if submitted:
+            player_id = get_ID(player)
+            osiics_id = get_ID(osiics)
+
+            if not player:
+                st.warning("Player name is required.")
+            else:
+                # Insert into Supabase
+                response = supabase.table("Injury").insert({
+                    "PlayerID": player_id,
+                    "InjuryStartDate": str(injury_start_date),
+                    "OSIICS_ID": osiics_id,
+                }).execute()
+
+                st.success(f"Injury '{osiics}' to '{player}' on '{injury_start_date}' added successfully!") 
 
 with tab3:
-    st.header("An owl")
-    st.image("https://static.streamlit.io/examples/owl.jpg", width=200)
+    st.header("Edit an Existing Injury")
+    # row_labels = create_edit_injury_options(df_injury_data)
+    st.data_editor(df_injury_data)
+
+with tab4:
+    
+    st.header("Add a Note to an Injury")
+    st.dataframe(notes_data)
+    st.dataframe(df_injury_data)
+
+    options = notes_options(df_injury_data)
+
+    with st.form("add_injury_note_form"):
+        injury = st.selectbox(label = "Select Injury", options = options)
+        note = st.text_area(label = "Enter Note")
+        submitted = st.form_submit_button("Add Injury")
+
+        if submitted:
+            PlayerID, OSIICS_ID, InjuryStartDate = get_Notes_ID(injury)            
+            InjuryNoteDate = datetime.today().strftime("%Y-%m-%d")
+            InjuryNoteMessage = note
+
+            if not note:
+                st.warning("A Note is Required.")
+            else:
+                # Insert into Supabase
+                response = supabase.table("InjuryNote").insert({
+                    "PlayerID": PlayerID,
+                    "OSIICS_ID": OSIICS_ID,
+                    "InjuryStartDate": str(InjuryStartDate),
+                    "InjuryNoteDate": str(InjuryNoteDate),
+                    "InjuryNoteMessage": InjuryNoteMessage
+    
+                }).execute()
+
+                st.success(f"Injury '' to '' on '' added successfully!") 
+
+    

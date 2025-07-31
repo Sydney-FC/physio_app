@@ -1,25 +1,14 @@
 import streamlit as st
-from supabase import create_client, Client
+from utils.database import init_connection, run_query
 
 # Initialise connection.
 # Uses st.cache_resource to only run once.
-@st.cache_resource
-def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+supabase = st.session_state.get("supabase")
 
-supabase = init_connection()
-
-# Perform query.
-@st.cache_data()
-def run_query():
-    return supabase.table("Player").select("*").execute().data
-
-rows = run_query()
+player_data = run_query("GetPlayers")
 
 st.header("All Players in Database")
-st.dataframe(rows)
+st.dataframe(player_data)
 
 st.header("Add a New Player")
 

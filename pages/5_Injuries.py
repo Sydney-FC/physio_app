@@ -4,10 +4,14 @@ import pandas as pd
 import re
 from datetime import datetime
 from supabase import create_client, Client
-from utils.func import get_ID, run_query, init_connection, osiics_summary, osiics_charts, notes_options, get_Notes_ID
+
+from utils.database import run_query
+
+
+from utils.func import get_ID, osiics_summary, osiics_charts, notes_options, get_Notes_ID
 from utils.options import create_list_options, create_options
 
-supabase = init_connection()
+supabase = st.session_state.get("supabase")
 
 if 'key' not in st.session_state:
     st.session_state['key'] = 'value'

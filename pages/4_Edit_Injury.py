@@ -1,11 +1,14 @@
 import streamlit as st
 import re
 from supabase import create_client, Client
-from utils.func import create_options, get_ID, create_edit_injury_options, run_query, init_connection
+
+from utils.database import run_query
+from utils.func import get_ID, create_edit_injury_options
+from utils.options import create_options
 
 ### Database
 
-supabase = init_connection()
+supabase = st.session_state.get("supabase")
 
 injury_data = run_query("GetInjuries")
 player_data = run_query("GetPlayers")

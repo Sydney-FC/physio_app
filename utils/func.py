@@ -1,6 +1,5 @@
 import re
 import plotly.express as px
-from supabase import create_client, Client
 import streamlit as st
 import pandas as pd
 
@@ -41,60 +40,7 @@ def notes_options(injury_dataframe):
 
     return options
 
-def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
 
-supabase = init_connection()
-
-def run_query(QueryName: str):
-
-    if QueryName == "GetNotes":
-
-        data = supabase.table("InjuryNote").select(
-            "InjuryNoteDate, InjuryNoteMessage, InjuryStartDate, Injury(OSIICS(OSIICS_Diagnosis), Player(PlayerName))"
-        ).execute().data
-
-        flattened = []
-        for row in data:
-            flattened.append({
-                "PlayerName": row["Injury"]["Player"]["PlayerName"],
-                "OSIICS_Diagnosis": row["Injury"]["OSIICS"]["OSIICS_Diagnosis"],
-                "InjuryStartDate": row["InjuryStartDate"],
-                "InjuryNoteDate": row["InjuryNoteDate"],
-                "InjuryNoteMessage": row["InjuryNoteMessage"]
-            })
-
-        return flattened
-
-    if QueryName == "GetInjuries":
-        
-        data = supabase.table("Injury").select(
-            "InjuryStartDate, InjuryEndDate, Player(PlayerID, PlayerName), OSIICS(*)"
-            ).execute().data
-        
-        flattened = []
-        for r in data:
-            flattened.append({
-                "InjuryStartDate": r["InjuryStartDate"],
-                "InjuryEndDate": r["InjuryEndDate"],
-                "PlayerID": r["Player"]["PlayerID"],
-                "PlayerName": r["Player"]["PlayerName"],
-                "OSIICS_ID": r["OSIICS"]["OSIICS_ID"],
-                "OSIICS_Diagnosis": r["OSIICS"]["OSIICS_Diagnosis"],
-                "OSIICS_BodyPart": r["OSIICS"]["OSIICS_BodyPart"],
-                "OSIICS_TissueType": r["OSIICS"]["OSIICS_TissueType"],
-                "OSIICS_PathologyType": r["OSIICS"]["OSIICS_PathologyType"]
-            })
-        
-        return flattened
-    
-    if QueryName == "GetPlayers":
-        return supabase.table("Player").select("*").execute().data
-    
-    if QueryName == "GetOSIICS":
-        return supabase.table("OSIICS").select("*").execute().data
     
 def osiics_summary(df_injury_data, column):
     summary = df_injury_data[column].value_counts().reset_index()

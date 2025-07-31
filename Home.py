@@ -1,5 +1,9 @@
 # streamlit_app.py
 import streamlit as st
+from utils.database import init_connection
+
+st.session_state.supabase = init_connection()
+
 
 st.set_page_config(
     page_title="Home",

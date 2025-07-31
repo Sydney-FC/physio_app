@@ -1,9 +1,8 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-import re
 from datetime import datetime
-from supabase import create_client, Client
+from supabase import Client
 from utils.func import get_ID, run_query, init_connection, osiics_summary, osiics_charts, notes_options, get_Notes_ID
 from utils.options import create_list_options, create_options
 
@@ -63,10 +62,7 @@ with tab1:
 with tab2:
     st.header("Add a New Injury")
 
-    player_options =[]
-    for player in player_data:
-        insert_values = create_options(player["PlayerName"], player["PlayerID"])
-        player_options.append(insert_values)
+    player_options = create_list_options(player_data, "Player")
 
     OSIICS_options = []
     for row in OSIICS_data:
@@ -102,9 +98,9 @@ with tab3:
 
 with tab4:
     st.header("Injury Notes")
-    # notes_data
     player_options = create_list_options(player_data, "Player")
-    OSIICS_options = create_list_options(OSIICS_data, "OSIICS")
+    # Get unique values for OSIICS
+
     PlayerName = st.multiselect(label="Filter By Athlete", options = player_options)
     O_diagnosis = None
     O_bodypart = None
@@ -112,6 +108,8 @@ with tab4:
     O_pathologytype = None
     start_date = None
     end_date = None
+
+    # How do i display injury notes? st.write(notes[InjuryNoteMessage])?
 
 with tab5:
     st.header("Add a Note to an Injury")

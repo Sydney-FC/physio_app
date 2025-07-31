@@ -19,3 +19,14 @@ def create_list_options(data, table):
         options.append(details)
 
     return options
+
+# diagnosis_options = set()
+# bodyPart_options = set()
+# tissuetype_options = set()
+# pathologytype_options = set()
+
+# for row in OSIICS_data:
+#     Diagnosis_options.add(row["OSIICS_Diagnosis"])
+#     bodyPart_options.add(row["OSIICS_BodyPart"])
+#     tissuetype_options.add(row["OSIICS_TissueType"])
+#     pathologytype_options.add(row["OSIICS_PathologyType"])

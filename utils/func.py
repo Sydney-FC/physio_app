@@ -16,7 +16,7 @@ def get_Notes_ID(selected):
     OSIICS_ID = IDs.group(2)
     return PlayerID, OSIICS_ID, date_str
 
-def create_edit_injury_options(dataframe):
+def create_edit_injury_options(dataframe: pd.DataFrame):
     row_labels = []
 
     for index, row in dataframe.iterrows():

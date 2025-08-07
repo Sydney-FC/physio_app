@@ -77,3 +77,4 @@ def run_query(QueryName: str) -> list[dict]:
         return handler(supabase)
     else:
         raise ValueError(f"Unknown query name: {QueryName}")
+        return []

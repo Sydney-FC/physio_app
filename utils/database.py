@@ -10,21 +10,35 @@ def init_connection() -> Client:
 
 def get_notes(supabase: Client) -> list[dict]:
     """Fetch injury notes with related player and diagnosis information."""
-
     data = supabase.table("InjuryNote").select(
         "InjuryNoteDate, InjuryNoteMessage, InjuryStartDate, Injury(OSIICS(OSIICS_Diagnosis), Player(PlayerName))"
     ).execute().data
-    return [
-        {
-            "PlayerName": row["Injury"]["Player"]["PlayerName"],
-            "OSIICS_Diagnosis": row["Injury"]["OSIICS"]["OSIICS_Diagnosis"],
-            "InjuryStartDate": row["InjuryStartDate"],
-            "InjuryNoteDate": row["InjuryNoteDate"],
-            "InjuryNoteMessage": row["InjuryNoteMessage"]
-        }
-        for row in data
-    ]
 
+    
+    results = []
+    for row in data:
+        # Check if all nested relationships exist and are not None
+        injury = row.get("Injury")
+        if injury and injury.get("Player") and injury.get("OSIICS"):
+            # Safe to access nested data
+            results.append({
+                "PlayerName": injury["Player"]["PlayerName"],
+                "OSIICS_Diagnosis": injury["OSIICS"]["OSIICS_Diagnosis"],
+                "InjuryStartDate": row.get("InjuryStartDate"),
+                "InjuryNoteDate": row.get("InjuryNoteDate"),
+                "InjuryNoteMessage": row.get("InjuryNoteMessage")
+            })
+        else:
+            # Handle cases where relationships are missing
+            results.append({
+                "PlayerName": "Unknown Player",
+                "OSIICS_Diagnosis": "Unknown Diagnosis",
+                "InjuryStartDate": row.get("InjuryStartDate", "Unknown"),
+                "InjuryNoteDate": row.get("InjuryNoteDate", "Unknown"),
+                "InjuryNoteMessage": row.get("InjuryNoteMessage", "No message")
+            })
+    
+    return results
 
 def get_injuries(supabase: Client) -> list[dict]:
     """Fetch injuries with related player and OSIICS information."""
@@ -47,7 +61,6 @@ def get_injuries(supabase: Client) -> list[dict]:
         for r in data
     ]
 
-@st.cache_data()
 def get_players(_supabase: Client) -> list[dict]:
     """Fetch all players from the database."""
 
@@ -56,8 +69,27 @@ def get_players(_supabase: Client) -> list[dict]:
 
 def get_osiics(supabase: Client) -> list[dict]:
     """Fetch all OSIICS records from the database."""
-
-    return supabase.table("OSIICS").select("*").execute().data
+    
+    # Use .range() to get all records, Supabase default limit might be 1000
+    all_data = []
+    page_size = 1000
+    start = 0
+    
+    while True:
+        response = supabase.table("OSIICS").select("*").range(start, start + page_size - 1).execute()
+        data = response.data
+        
+        if not data:  # No more data
+            break
+            
+        all_data.extend(data)
+        
+        if len(data) < page_size:  # Last page
+            break
+            
+        start += page_size
+    
+    return all_data
 
 
 QUERY_HANDLER: dict[str, callable] = {

@@ -1,20 +1,41 @@
-# streamlit_app.py
 import streamlit as st
-from utils.database import init_connection
+from streamlit.dataframe_util import Data
+from utils.database import *
 
-st.session_state.supabase = init_connection()
+from content.select_athlete import select_athlete
+from content.injuries import display_injuries
+
+import pandas as pd
 
 
 st.set_page_config(
-    page_title="Home",
-    page_icon="🏠",
+    page_title="Physio App",
 )
 
-st.write("# Welcome to the Physio App! 👋")
+supabase = st.session_state.get("supabase")
 
-st.markdown(
-    """
-    This web application has been designed for the workflow of sports physio's.
-    Select a web page from the left for your desired workflow.
-"""
-)
+if not supabase:
+    supabase = init_connection()
+    st.session_state.supabase = supabase
+
+athlete_df = st.session_state.get("athlete_data")
+
+if athlete_df is None:
+    athlete_df = pd.DataFrame(get_athletes(supabase))
+    st.session_state.player_data = athlete_df
+
+st.title("Players")
+
+athlete_id = select_athlete(athlete_df)
+
+if athlete_id:
+    
+    
+    injuries_df = st.session_state.get("injuries")
+    
+    if injuries_df is None:
+        injuries_df = pd.DataFrame(get_injuries(supabase, athlete_id))
+        st.session_state.injuries = injuries_df
+    
+    display_injuries(injuries_df)
+    

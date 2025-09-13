@@ -1,9 +1,10 @@
 import streamlit as st
 from streamlit.dataframe_util import Data
+from streamlit.runtime.state import session_state
 from utils.database import *
 
 from content.select_athlete import select_athlete
-from content.injuries import display_injuries
+from content.injuries import display_injuries, render_add_injury_form, render_update_injury_form
 
 import pandas as pd
 
@@ -30,7 +31,6 @@ athlete_id = select_athlete(athlete_df)
 
 if athlete_id:
     
-    
     injuries_df = st.session_state.get("injuries")
     
     if injuries_df is None:
@@ -39,3 +39,12 @@ if athlete_id:
     
     display_injuries(injuries_df)
     
+    
+    if "adding_injury" not in st.session_state:
+        st.session_state.adding_injury = False
+    
+    if st.button("Add Injury"):
+        st.session_state.adding_injury = not st.session_state.adding_injury
+    
+    if st.session_state.adding_injury:
+        render_add_injury_form(get_moi(supabase), get_moo(supabase))

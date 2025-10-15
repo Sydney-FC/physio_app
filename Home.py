@@ -47,4 +47,9 @@ if athlete_id:
         st.session_state.adding_injury = not st.session_state.adding_injury
     
     if st.session_state.adding_injury:
-        render_add_injury_form(get_moi(supabase), get_moo(supabase))
+        render_add_injury_form(
+            athlete_id,
+            get_moi(supabase),
+            get_moo(supabase),
+            get_osiics(supabase)
+        )

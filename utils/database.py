@@ -43,31 +43,64 @@ def get_athletes(supabase: Client) -> list[dict]:
     return supabase.table("athlete").select("*").execute().data
 
 
-def get_osiics(supabase: Client) -> list[dict]:
-    """Fetch all OSIICS records from the database."""
+def insert_injury(supabase: Client, payload: dict) -> dict | None:
+    """Insert a new injury row. Returns inserted row (incl. injury_id) or None on failure.
 
-    # Use .range() to get all records, Supabase default limit might be 1000
-    all_data = []
+    Required keys per schema: athlete_id, ossics_code, start_date
+    Optional keys: moo_id, moi_id, rpt, rpg, ftdg
+    Notes are stored in injury_notes table separately.
+    """
+    resp = supabase.table("injury").insert(payload).select("*").execute()
+    data = getattr(resp, "data", None)
+    return (data[0] if data and isinstance(data, list) and data else None)
+
+def insert_injury_note(supabase: Client, injury_id: str, note_content: str) -> dict | None:
+    """Insert a note for an injury into injury_notes. Returns inserted row or None."""
+    resp = (
+        supabase.table("injury_notes")
+        .insert({"injury_id": injury_id, "note_content": note_content})
+        .execute()
+    )
+    data = getattr(resp, "data", None)
+    return (data[0] if data and isinstance(data, list) and data else None)
+
+def get_osiics(supabase: Client) -> dict[str, str]:
+    """Return OSIICS options as {label: osiics_code}, matching get_moi/get_moo style.
+
+    Label format: "Diagnosis (Bodypart, Tissue, Pathology)" where optional fields are omitted if null.
+    """
+
+    options: dict[str, str] = {}
     page_size = 1000
     start = 0
 
     while True:
+        # Order by primary key to keep paging stable; table name is lowercase in Postgres
         response = (
-            supabase.table("OSIICS")
+            supabase.table("osiics")
             .select("*")
+            .order("osiics_code", desc=False)
             .range(start, start + page_size - 1)
             .execute()
         )
-        data = response.data
 
-        if not data:  # No more data
+        rows = response.data or []
+        if not rows:
             break
 
-        all_data.extend(data)
+        for item in rows:
+            diagnosis = item.get("diagnosis") or ""
+            # Build detail parts, omit missing/empty
+            parts = [p for p in [item.get("bodypart"), item.get("tissue_type"), item.get("pathology_type")] if p]
+            label = diagnosis if not parts else f"{diagnosis} ({', '.join(parts)})"
+            code = item.get("osiics_code")
+            if code:
+                options[label] = code
 
-        if len(data) < page_size:  # Last page
+        if len(rows) < page_size:
+            # Last page
             break
 
         start += page_size
 
-    return all_data
+    return options

@@ -23,7 +23,8 @@ athlete_df = st.session_state.get("athlete_data")
 
 if athlete_df is None:
     athlete_df = pd.DataFrame(get_athletes(supabase))
-    st.session_state.player_data = athlete_df
+    # Store consistently under 'athlete_data'
+    st.session_state.athlete_data = athlete_df
 
 st.title("Players")
 
@@ -31,21 +32,13 @@ athlete_id = select_athlete(athlete_df)
 
 if athlete_id:
     
-    injuries_df = st.session_state.get("injuries")
-    
-    if injuries_df is None:
-        injuries_df = pd.DataFrame(get_injuries(supabase, athlete_id))
-        st.session_state.injuries = injuries_df
-    
-    display_injuries(injuries_df)
-    
-    
     if "adding_injury" not in st.session_state:
         st.session_state.adding_injury = False
-    
+
+    # Add Injury control at the top
     if st.button("Add Injury"):
         st.session_state.adding_injury = not st.session_state.adding_injury
-    
+
     if st.session_state.adding_injury:
         render_add_injury_form(
             athlete_id,
@@ -53,3 +46,11 @@ if athlete_id:
             get_moo(supabase),
             get_osiics(supabase)
         )
+
+    injuries_df = st.session_state.get("injuries")
+
+    if injuries_df is None:
+        injuries_df = pd.DataFrame(get_injuries(supabase, athlete_id))
+        st.session_state.injuries = injuries_df
+
+    display_injuries(injuries_df)

@@ -50,11 +50,54 @@ def insert_injury(supabase: Client, payload: dict) -> dict | None:
     Optional keys: moo_id, moi_id, rpt, rpg, ftdg
     Notes are stored in injury_notes table separately.
     """
-    resp = supabase.table("injury").insert(payload).select("*").execute()
-    data = getattr(resp, "data", None)
-    return (data[0] if data and isinstance(data, list) and data else None)
+    # Debug: Check what columns actually exist in the injury table
+    try:
+        test_resp = supabase.table("injury").select("*").limit(1).execute()
+        if test_resp.data and test_resp.data[0]:
+            available_columns = list(test_resp.data[0].keys())
+            print(f"DEBUG: Available columns in injury table: {available_columns}")
+        else:
+            print("DEBUG: injury table exists but has no data to check columns")
+    except Exception as e:
+        print(f"DEBUG: Error checking injury table schema: {e}")
 
-def insert_injury_note(supabase: Client, injury_id: str, note_content: str) -> dict | None:
+    # Try to handle potential column name variations
+    original_payload = payload.copy()
+
+    # If payload has ossics_code but table might expect osiics_code (or vice versa)
+    if "ossics_code" in payload:
+        # First try with the original payload
+        try:
+            resp = supabase.table("injury").insert(payload).execute()
+            data = getattr(resp, "data", None)
+            return data[0] if data and isinstance(data, list) and data else None
+        except Exception as e:
+            if "ossics_code" in str(e) and "Could not find" in str(e):
+                print(
+                    f"DEBUG: Original ossics_code failed, trying osiics_code variant: {e}"
+                )
+                # Try with osiics_code instead
+                modified_payload = payload.copy()
+                modified_payload["osiics_code"] = modified_payload.pop("ossics_code")
+                try:
+                    resp = supabase.table("injury").insert(modified_payload).execute()
+                    data = getattr(resp, "data", None)
+                    return data[0] if data and isinstance(data, list) and data else None
+                except Exception as e2:
+                    print(f"DEBUG: osiics_code variant also failed: {e2}")
+                    raise e  # Re-raise the original error
+            else:
+                raise e
+    else:
+        # Standard insert if no ossics_code in payload
+        resp = supabase.table("injury").insert(payload).execute()
+        data = getattr(resp, "data", None)
+        return data[0] if data and isinstance(data, list) and data else None
+
+
+def insert_injury_note(
+    supabase: Client, injury_id: str, note_content: str
+) -> dict | None:
     """Insert a note for an injury into injury_notes. Returns inserted row or None."""
     resp = (
         supabase.table("injury_notes")
@@ -62,7 +105,8 @@ def insert_injury_note(supabase: Client, injury_id: str, note_content: str) -> d
         .execute()
     )
     data = getattr(resp, "data", None)
-    return (data[0] if data and isinstance(data, list) and data else None)
+    return data[0] if data and isinstance(data, list) and data else None
+
 
 def get_osiics(supabase: Client) -> dict[str, str]:
     """Return OSIICS options as {label: osiics_code}, matching get_moi/get_moo style.
@@ -91,7 +135,15 @@ def get_osiics(supabase: Client) -> dict[str, str]:
         for item in rows:
             diagnosis = item.get("diagnosis") or ""
             # Build detail parts, omit missing/empty
-            parts = [p for p in [item.get("bodypart"), item.get("tissue_type"), item.get("pathology_type")] if p]
+            parts = [
+                p
+                for p in [
+                    item.get("bodypart"),
+                    item.get("tissue_type"),
+                    item.get("pathology_type"),
+                ]
+                if p
+            ]
             label = diagnosis if not parts else f"{diagnosis} ({', '.join(parts)})"
             code = item.get("osiics_code")
             if code:

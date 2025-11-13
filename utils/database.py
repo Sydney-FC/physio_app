@@ -76,7 +76,8 @@ def insert_injury_note(supabase: Client, injury_id: str, note_content: str) -> d
         .execute()
     )
     data = getattr(resp, "data", None)
-    return (data[0] if data and isinstance(data, list) and data else None)
+    return data[0] if data and isinstance(data, list) and data else None
+
 
 def get_osiics(supabase: Client) -> dict[str, str]:
     """Return OSIICS options as {label: osiics_code}, matching get_moi/get_moo style.
@@ -105,7 +106,15 @@ def get_osiics(supabase: Client) -> dict[str, str]:
         for item in rows:
             diagnosis = item.get("diagnosis") or ""
             # Build detail parts, omit missing/empty
-            parts = [p for p in [item.get("bodypart"), item.get("tissue_type"), item.get("pathology_type")] if p]
+            parts = [
+                p
+                for p in [
+                    item.get("bodypart"),
+                    item.get("tissue_type"),
+                    item.get("pathology_type"),
+                ]
+                if p
+            ]
             label = diagnosis if not parts else f"{diagnosis} ({', '.join(parts)})"
             code = item.get("osiics_code")
             if code:

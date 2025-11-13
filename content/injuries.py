@@ -12,14 +12,52 @@ from utils.database import (
 
 
 def display_injuries(injuries_df: pd.DataFrame):
-    st.dataframe(injuries_df)
+    """Render past injuries as readable cards with an Update button per injury."""
+    if injuries_df is None or injuries_df.empty:
+        st.info("No past injuries recorded.")
+        return
+
+    moi_by_id, moo_by_id, osiics_by_code = _build_lookup_maps()
+    records = injuries_df.to_dict(orient="records")
+
+    for idx, row in enumerate(records):
+        injury_key = row.get("injury_id", idx)
+        # DB column is 'ossics_code' (FK to osiics.osiics_code)
+        diagnosis_label = osiics_by_code.get(row.get("osiics_code"))
+        start_label = _fmt_date(row.get("start_date"))
+
+        header_cols = st.columns([0.75, 0.25])
+        with header_cols[0]:
+            st.markdown(f"### {diagnosis_label}")
+            st.caption(f"Start Date: {start_label}")
+        with header_cols[1]:
+            st.button(
+                "Update", key=f"update_injury_{injury_key}", use_container_width=True
+            )
+
+        info_cols = st.columns(2)
+        with info_cols[0]:
+            st.markdown(
+                f"**Mechanism of Injury**: {moi_by_id.get(row.get('moi_id')) or '—'}"
+            )
+            st.markdown(f"**Mode of Onset**: {moo_by_id.get(row.get('moo_id')) or '—'}")
+        with info_cols[1]:
+            st.markdown(f"**Return to Partial Training**: {_fmt_date(row.get('rpt'))}")
+            st.markdown(f"**Return to Partial Games**: {_fmt_date(row.get('rpg'))}")
+            st.markdown(
+                f"**Return to Full Training & Games**: {_fmt_date(row.get('ftdg'))}"
+            )
+
+        st.divider()
 
 
 def render_injury_insertion():
     st.write("Insert Injury")
 
 
-def render_add_injury_form(athlete_id: str, moi_options: dict, moo_options: dict, osiics_options: dict):
+def render_add_injury_form(
+    athlete_id: str, moi_options: dict, moo_options: dict, osiics_options: dict
+):
     with st.form("add_injury_form", clear_on_submit=False):
         col1, col2 = st.columns(2)
 
@@ -30,18 +68,27 @@ def render_add_injury_form(athlete_id: str, moi_options: dict, moo_options: dict
             ftdg = st.date_input("Return To Full Training, Full Games", value=None)
 
         with col2:
-            selected_ossics = st.selectbox(
-                "OSIICS Diagnosis", options=list(osiics_options.keys()), index=None, placeholder="Select diagnosis"
+            selected_osiics = st.selectbox(
+                "OSIICS Diagnosis",
+                options=list(osiics_options.keys()),
+                index=None,
+                placeholder="Select diagnosis",
             )
-            osiics_code = osiics_options.get(selected_ossics)
+            osiics_code = osiics_options.get(selected_osiics)
 
             selected_moi = st.selectbox(
-                "Mechanism of Injury", options=list(moi_options.keys()), index=None, placeholder="Select MOI"
+                "Mechanism of Injury",
+                options=list(moi_options.keys()),
+                index=None,
+                placeholder="Select MOI",
             )
             moi_id = moi_options.get(selected_moi)
 
             selected_moo = st.selectbox(
-                "Mode of Onset", options=list(moo_options.keys()), index=None, placeholder="Select MOO"
+                "Mode of Onset",
+                options=list(moo_options.keys()),
+                index=None,
+                placeholder="Select MOO",
             )
             moo_id = moo_options.get(selected_moo)
 
@@ -65,7 +112,6 @@ def render_add_injury_form(athlete_id: str, moi_options: dict, moo_options: dict
         if not osiics_code:
             errors.append("OSIICS diagnosis is required.")
 
-
         if errors:
             for e in errors:
                 st.error(e)
@@ -85,6 +131,7 @@ def render_add_injury_form(athlete_id: str, moi_options: dict, moo_options: dict
             "rpt": _d(rpt),
             "rpg": _d(rpg),
             "ftdg": _d(ftdg),
+            # Insert into injury.ossics_code per schema (references osiics.osiics_code)
             "osiics_code": osiics_code,
             "moi_id": moi_id,
             "moo_id": moo_id,
@@ -106,7 +153,7 @@ def render_add_injury_form(athlete_id: str, moi_options: dict, moo_options: dict
                 st.session_state.injuries = df
             except Exception:
                 pass
-            
+
             st.session_state.adding_injury = False
         else:
             st.error("Failed to save injury. Please try again.")

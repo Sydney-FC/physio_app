@@ -61,3 +61,6 @@ if athlete_id:
         st.session_state.injuries = injuries_df
 
     display_injuries(injuries_df)
+
+    if st.session_state.get("updating_injury_id"):
+        render_update_injury_form()

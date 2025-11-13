@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from utils.database import (
     insert_injury,
+    update_injury,
     get_injuries,
     insert_injury_note,
     get_moi,
@@ -58,9 +59,15 @@ def display_injuries(injuries_df: pd.DataFrame):
             st.markdown(f"### {diagnosis_label}")
             st.caption(f"Start Date: {start_label}")
         with header_cols[1]:
-            st.button(
-                "Update", key=f"update_injury_{injury_key}", use_container_width=True
-            )
+            if st.button(
+                "Update",
+                key=f"update_injury_{injury_key}",
+                use_container_width=True,
+                disabled=not row.get("injury_id"),
+            ):
+                st.session_state.updating_injury_id = row.get("injury_id")
+                st.session_state.updating_injury_data = dict(row)
+                st.session_state.adding_injury = False
 
         info_cols = st.columns(2)
         with info_cols[0]:
@@ -187,5 +194,155 @@ def render_add_injury_form(
 
 
 def render_update_injury_form():
+    injury_id = st.session_state.get("updating_injury_id")
+    injury_data = st.session_state.get("updating_injury_data") or {}
 
-    pass
+    if not injury_id:
+        st.warning("No injury selected for update.")
+        return
+
+    supabase = st.session_state.get("supabase")
+    if not supabase:
+        st.error("Database connection not available.")
+        return
+
+    athlete_id = injury_data.get("athlete_id") or st.session_state.get(
+        "selected_athlete_id"
+    )
+
+    moi_options = get_moi(supabase)
+    moo_options = get_moo(supabase)
+    osiics_options = get_osiics(supabase)
+
+    def _to_date(value):
+        if not value:
+            return None
+        try:
+            return pd.to_datetime(value).date()
+        except Exception:
+            return None
+
+    def _label_for_id(options: dict, identifier):
+        for label, option_id in options.items():
+            if option_id == identifier:
+                return label
+        return None
+
+    with st.form("update_injury_form", clear_on_submit=False):
+        col1, col2 = st.columns(2)
+
+        with col1:
+            start_date = st.date_input(
+                "Starting Date", value=_to_date(injury_data.get("start_date"))
+            )
+            rpt = st.date_input(
+                "Return To Partial Training",
+                value=_to_date(injury_data.get("rpt")),
+            )
+            rpg = st.date_input(
+                "Return To Partial Games",
+                value=_to_date(injury_data.get("rpg")),
+            )
+            ftdg = st.date_input(
+                "Return To Full Training, Full Games",
+                value=_to_date(injury_data.get("ftdg")),
+            )
+
+        with col2:
+            osiics_labels = list(osiics_options.keys())
+            current_osiics_label = _label_for_id(
+                osiics_options, injury_data.get("osiics_code")
+            )
+            osiics_index = (
+                osiics_labels.index(current_osiics_label)
+                if current_osiics_label in osiics_labels
+                else None
+            )
+            selected_osiics = st.selectbox(
+                "OSIICS Diagnosis",
+                options=osiics_labels,
+                index=osiics_index,
+                placeholder="Select diagnosis",
+            )
+            osiics_code = osiics_options.get(selected_osiics)
+
+            moi_labels = list(moi_options.keys())
+            current_moi_label = _label_for_id(moi_options, injury_data.get("moi_id"))
+            moi_index = (
+                moi_labels.index(current_moi_label)
+                if current_moi_label in moi_labels
+                else None
+            )
+            selected_moi = st.selectbox(
+                "Mechanism of Injury",
+                options=moi_labels,
+                index=moi_index,
+                placeholder="Select MOI",
+            )
+            moi_id = moi_options.get(selected_moi)
+
+            moo_labels = list(moo_options.keys())
+            current_moo_label = _label_for_id(moo_options, injury_data.get("moo_id"))
+            moo_index = (
+                moo_labels.index(current_moo_label)
+                if current_moo_label in moo_labels
+                else None
+            )
+            selected_moo = st.selectbox(
+                "Mode of Onset",
+                options=moo_labels,
+                index=moo_index,
+                placeholder="Select MOO",
+            )
+            moo_id = moo_options.get(selected_moo)
+
+        submit_col, cancel_col = st.columns([1, 1])
+        submit = submit_col.form_submit_button("Update Injury", use_container_width=True)
+        cancel = cancel_col.form_submit_button("Cancel", use_container_width=True)
+
+    if cancel:
+        st.session_state.updating_injury_id = None
+        st.session_state.updating_injury_data = None
+        return
+
+    if submit:
+        errors = []
+        if not athlete_id:
+            errors.append("No athlete selected.")
+        if not start_date:
+            errors.append("Starting Date is required.")
+        if not osiics_code:
+            errors.append("OSIICS diagnosis is required.")
+
+        if errors:
+            for e in errors:
+                st.error(e)
+            return
+
+        def _d(d):
+            return d.isoformat() if d else None
+
+        payload = {
+            "athlete_id": athlete_id,
+            "start_date": _d(start_date),
+            "rpt": _d(rpt),
+            "rpg": _d(rpg),
+            "ftdg": _d(ftdg),
+            "osiics_code": osiics_code,
+            "moi_id": moi_id,
+            "moo_id": moo_id,
+        }
+
+        updated = update_injury(supabase, injury_id, payload)
+
+        if updated:
+            st.success("Injury updated.")
+            try:
+                df = pd.DataFrame(get_injuries(supabase, athlete_id))
+                st.session_state.injuries = df
+            except Exception:
+                pass
+            st.session_state.updating_injury_id = None
+            st.session_state.updating_injury_data = None
+        else:
+            st.error("Failed to update injury. Please try again.")

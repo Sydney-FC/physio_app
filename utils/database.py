@@ -54,6 +54,20 @@ def insert_injury(supabase: Client, payload: dict) -> dict | None:
     data = getattr(resp, "data", None)
     return (data[0] if data and isinstance(data, list) and data else None)
 
+
+def update_injury(supabase: Client, injury_id: str, payload: dict) -> dict | None:
+    """Update an existing injury record and return the updated row, or None on failure."""
+
+    resp = (
+        supabase.table("injury")
+        .update(payload)
+        .eq("injury_id", injury_id)
+        .select("*")
+        .execute()
+    )
+    data = getattr(resp, "data", None)
+    return (data[0] if data and isinstance(data, list) and data else None)
+
 def insert_injury_note(supabase: Client, injury_id: str, note_content: str) -> dict | None:
     """Insert a note for an injury into injury_notes. Returns inserted row or None."""
     resp = (

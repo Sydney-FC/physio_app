@@ -42,13 +42,35 @@ if athlete_id:
     
     if "adding_injury" not in st.session_state:
         st.session_state.adding_injury = False
-    
-    if st.button("Add Injury"):
-        st.session_state.adding_injury = not st.session_state.adding_injury
-    
+    if "updating_injury" not in st.session_state:
+        st.session_state.updating_injury = False
+    if "selected_injury_id" not in st.session_state:
+        st.session_state.selected_injury_id = None
+
+    add_col, update_col = st.columns(2)
+    with add_col:
+        if st.button("Add Injury", use_container_width=True):
+            st.session_state.adding_injury = not st.session_state.adding_injury
+            if st.session_state.adding_injury:
+                st.session_state.updating_injury = False
+    with update_col:
+        if st.button("Update Injury", use_container_width=True):
+            st.session_state.updating_injury = not st.session_state.updating_injury
+            if st.session_state.updating_injury:
+                st.session_state.adding_injury = False
+
     if st.session_state.adding_injury:
         render_add_injury_form(
             athlete_id,
+            get_moi(supabase),
+            get_moo(supabase),
+            get_osiics(supabase)
+        )
+
+    if st.session_state.updating_injury:
+        render_update_injury_form(
+            athlete_id,
+            injuries_df,
             get_moi(supabase),
             get_moo(supabase),
             get_osiics(supabase)

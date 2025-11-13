@@ -47,6 +47,7 @@ def display_injuries(injuries_df: pd.DataFrame):
 
     moi_by_id, moo_by_id, osiics_by_code = _build_lookup_maps()
     records = injuries_df.to_dict(orient="records")
+    updating_id = st.session_state.get("updating_injury_id")
 
     for idx, row in enumerate(records):
         injury_key = row.get("injury_id", idx)
@@ -54,35 +55,51 @@ def display_injuries(injuries_df: pd.DataFrame):
         diagnosis_label = osiics_by_code.get(row.get("osiics_code"))
         start_label = _fmt_date(row.get("start_date"))
 
-        header_cols = st.columns([0.75, 0.25])
-        with header_cols[0]:
-            st.markdown(f"### {diagnosis_label}")
-            st.caption(f"Start Date: {start_label}")
-        with header_cols[1]:
-            if st.button(
-                "Update",
-                key=f"update_injury_{injury_key}",
-                use_container_width=True,
-                disabled=not row.get("injury_id"),
-            ):
-                st.session_state.updating_injury_id = row.get("injury_id")
-                st.session_state.updating_injury_data = dict(row)
-                st.session_state.adding_injury = False
+        with st.container():
+            if updating_id and row.get("injury_id") == updating_id:
+                st.markdown(
+                    f"### Update Injury{f': {diagnosis_label}' if diagnosis_label else ''}"
+                )
+                st.caption(f"Start Date: {start_label}")
+                render_update_injury_form()
+                st.divider()
+                continue
 
-        info_cols = st.columns(2)
-        with info_cols[0]:
-            st.markdown(
-                f"**Mechanism of Injury**: {moi_by_id.get(row.get('moi_id')) or '—'}"
-            )
-            st.markdown(f"**Mode of Onset**: {moo_by_id.get(row.get('moo_id')) or '—'}")
-        with info_cols[1]:
-            st.markdown(f"**Return to Partial Training**: {_fmt_date(row.get('rpt'))}")
-            st.markdown(f"**Return to Partial Games**: {_fmt_date(row.get('rpg'))}")
-            st.markdown(
-                f"**Return to Full Training & Games**: {_fmt_date(row.get('ftdg'))}"
-            )
+            header_cols = st.columns([0.75, 0.25])
+            with header_cols[0]:
+                st.markdown(f"### {diagnosis_label}")
+                st.caption(f"Start Date: {start_label}")
+            with header_cols[1]:
+                if st.button(
+                    "Update",
+                    key=f"update_injury_{injury_key}",
+                    use_container_width=True,
+                    disabled=not row.get("injury_id"),
+                ):
+                    st.session_state.updating_injury_id = row.get("injury_id")
+                    st.session_state.updating_injury_data = dict(row)
+                    st.session_state.adding_injury = False
 
-        st.divider()
+            info_cols = st.columns(2)
+            with info_cols[0]:
+                st.markdown(
+                    f"**Mechanism of Injury**: {moi_by_id.get(row.get('moi_id')) or '—'}"
+                )
+                st.markdown(
+                    f"**Mode of Onset**: {moo_by_id.get(row.get('moo_id')) or '—'}"
+                )
+            with info_cols[1]:
+                st.markdown(
+                    f"**Return to Partial Training**: {_fmt_date(row.get('rpt'))}"
+                )
+                st.markdown(
+                    f"**Return to Partial Games**: {_fmt_date(row.get('rpg'))}"
+                )
+                st.markdown(
+                    f"**Return to Full Training & Games**: {_fmt_date(row.get('ftdg'))}"
+                )
+
+            st.divider()
 
 
 def render_injury_insertion():

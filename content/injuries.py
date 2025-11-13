@@ -61,6 +61,7 @@ def display_injuries(injuries_df: pd.DataFrame):
                     f"### Update Injury{f': {diagnosis_label}' if diagnosis_label else ''}"
                 )
                 st.caption(f"Start Date: {start_label}")
+                st.session_state["_inline_update_form_rendered"] = True
                 render_update_injury_form()
                 st.divider()
                 continue

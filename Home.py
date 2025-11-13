@@ -4,7 +4,11 @@ from streamlit.runtime.state import session_state
 from utils.database import *
 
 from content.select_athlete import select_athlete
-from content.injuries import display_injuries, render_add_injury_form
+from content.injuries import (
+    display_injuries,
+    render_add_injury_form,
+    render_update_injury_form,
+)
 
 import pandas as pd
 
@@ -62,5 +66,6 @@ if athlete_id:
 
     display_injuries(injuries_df)
 
-    if st.session_state.get("updating_injury_id"):
+    inline_rendered = st.session_state.pop("_inline_update_form_rendered", False)
+    if st.session_state.get("updating_injury_id") and not inline_rendered:
         render_update_injury_form()

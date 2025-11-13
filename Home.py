@@ -4,7 +4,11 @@ from streamlit.runtime.state import session_state
 from utils.database import *
 
 from content.select_athlete import select_athlete
-from content.injuries import display_injuries, render_add_injury_form, render_update_injury_form
+from content.injuries import (
+    display_injuries,
+    render_add_injury_form,
+    render_update_injury_form,
+)
 
 import pandas as pd
 
@@ -31,13 +35,20 @@ st.title("Players")
 athlete_id = select_athlete(athlete_df)
 
 if athlete_id:
-    
+
     if "adding_injury" not in st.session_state:
         st.session_state.adding_injury = False
+    if "updating_injury_id" not in st.session_state:
+        st.session_state.updating_injury_id = None
+    if "updating_injury_data" not in st.session_state:
+        st.session_state.updating_injury_data = None
 
     # Add Injury control at the top
     if st.button("Add Injury"):
         st.session_state.adding_injury = not st.session_state.adding_injury
+        if st.session_state.adding_injury:
+            st.session_state.updating_injury_id = None
+            st.session_state.updating_injury_data = None
 
     if st.session_state.adding_injury:
         render_add_injury_form(
@@ -54,3 +65,7 @@ if athlete_id:
         st.session_state.injuries = injuries_df
 
     display_injuries(injuries_df)
+
+    inline_rendered = st.session_state.pop("_inline_update_form_rendered", False)
+    if st.session_state.get("updating_injury_id") and not inline_rendered:
+        render_update_injury_form()
